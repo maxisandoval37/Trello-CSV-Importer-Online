@@ -1,0 +1,10 @@
+Name,Description,Labels,List
+EP1 - Pruebas de Sistema,"Validar funcionamiento básico del importador Trello.",Epic,Backlog
+US1.1 - Crear tarjeta de prueba,"Como usuario quiero crear una tarjeta de ejemplo para validar la conexión con Trello.","User Story",Backlog
+US1.2 - Validar importación,"Como tester quiero verificar que las tarjetas se creen correctamente en el tablero.","User Story",Backlog
+US1.3 - Confirmar etiquetas,"Como usuario quiero confirmar que las etiquetas y listas se asignen bien.","User Story",Backlog
+
+EP2 - Pruebas de Sistema,"Validar funcionamiento básico del importador Trello.",Epic,Backlog
+US2.1 - Crear tarjeta de prueba,"Como usuario quiero crear una tarjeta de ejemplo para validar la conexión con Trello.","User Story",Backlog
+US2.2 - Validar importación,"Como tester quiero verificar que las tarjetas se creen correctamente en el tablero.","User Story",Backlog
+US2.3 - Confirmar etiquetas,"Como usuario quiero confirmar que las etiquetas y listas se asignen bien.","User Story",Backlog

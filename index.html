@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Importar Backlog a Trello (CSV → Tarjetas) v2</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 24px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  label { display:block; font-weight:600; margin-top:10px; }
+  input[type=text], input[type=password], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
+  input[type=file]{ margin-top: 6px; }
+  button { padding: 10px 16px; border: 0; border-radius: 8px; background:#0a66c2; color:#fff; cursor:pointer; font-weight:600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .muted{ color:#666; font-size:12px; }
+  .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  progress{ width:100%; height:16px; }
+  pre{ background:#0b0b0b; color:#d6d6d6; padding:12px; border-radius:8px; overflow:auto; max-height:260px; }
+  .ok{ color: #0a7f3f; font-weight:600; }
+  .warn{ color:#b26a00; font-weight:600; }
+  .err{ color:#b00020; font-weight:600; }
+</style>
+</head>
+<body>
+  <h1>Importar Backlog a Trello (CSV → Tarjetas) v2</h1>
+  <div class="card">
+    <p>Este asistente crea listas que falten (por ej. <b>Backlog</b>) y luego tarjetas a partir de un CSV con columnas <code>Name,Description,Labels,List</code>.</p>
+    <p class="muted">Compatibilidad mejorada con archivos CSV Windows/Mac/Linux, CRLF/LF y BOM.</p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="apiKey">API Key de Trello</label>
+        <input id="apiKey" type="text" placeholder="p.ej. 6260..."/>
+      </div>
+      <div>
+        <label for="token">Token personal</label>
+        <input id="token" type="password" placeholder="Tu token de autorización"/>
+      </div>
+    </div>
+    <label for="csvFile">CSV</label>
+    <input id="csvFile" type="file" accept=".csv,text/csv"/>
+    <div class="row">
+      <div>
+        <label for="boardSelect">Tablero destino</label>
+        <select id="boardSelect" disabled>
+          <option value="">Cargar tableros…</option>
+        </select>
+      </div>
+      <div>
+        <label for="delay">Velocidad (delay por tarjeta, ms)</label>
+        <input id="delay" type="text" value="180"/>
+        <span class="muted">Aumentar si ves rate limit.</span>
+      </div>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button id="btnLoadBoards">1) Cargar tableros</button>
+      <button id="btnRun" disabled>2) Importar CSV → Trello</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="prog">Estado</label>
+      <progress id="prog" value="0" max="100"></progress>
+      <div id="status" class="muted">Esperando…</div>
+    <label for="log">Registro</label>
+    <pre id="log"></pre>
+  </div>
+
+<script>
+(function(){
+  const $ = (sel)=>document.querySelector(sel);
+  const api = {
+    key: ()=> $('#apiKey').value.trim(),
+    token: ()=> $('#token').value.trim(),
+    base: 'https://api.trello.com/1/'
+  };
+
+  function log(msg, cls='') {
+    const el = $('#log');
+    el.innerHTML += (cls ? '['+cls.toUpperCase()+'] ' : '') + msg + "\\n";
+    el.scrollTop = el.scrollHeight;
+  }
+  function setStatus(msg){ $('#status').textContent = msg; }
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  async function trelloGET(path, params={}) {
+    const url = new URL(api.base + path);
+    url.searchParams.set('key', api.key());
+    url.searchParams.set('token', api.token());
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+    const res = await fetch(url.toString());
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error('GET '+path+' '+res.status+' -> '+t);
+    }
+    return res.json();
+  }
+  async function trelloPOST(path, body={}) {
+    const url = new URL(api.base + path);
+    url.searchParams.set('key', api.key());
+    url.searchParams.set('token', api.token());
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error('POST '+path+' '+res.status+' -> '+t);
+    }
+    return res.json();
+  }
+
+  // Parser robusto con soporte LF/CRLF y BOM
+  function parseCSV(text){
+    // Remover BOM si existe
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
+    const rows=[]; let row=[], cur='', inQ=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i], nx=text[i+1];
+      if(ch === '"' && !inQ){ inQ=true; continue; }
+      if(ch === '"' && inQ){
+        if(nx === '"'){ cur+='"'; i++; continue; }
+        inQ=false; continue;
+      }
+      if(ch === ',' && !inQ){ row.push(cur); cur=''; continue; }
+      if((ch === '\n' || ch === '\r') && !inQ){
+        if(cur!=='' || row.length){ row.push(cur); rows.push(row); row=[]; cur=''; }
+        if(ch === '\r' && nx === '\n'){ i++; }
+        continue;
+      }
+      cur += ch;
+    }
+    if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  $('#btnLoadBoards').addEventListener('click', async ()=>{
+    try {
+      $('#btnLoadBoards').disabled = true;
+      setStatus('Cargando tableros…');
+      const boards = await trelloGET('members/me/boards', { fields:'name' });
+      const openBoards = boards.filter(b=>!b.closed);
+      const sel = $('#boardSelect');
+      sel.innerHTML = '<option value="">Seleccioná…</option>';
+      openBoards.forEach(b=>{
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      $('#btnRun').disabled = false;
+      setStatus('Tableros cargados. Seleccioná uno y ejecutá la importación.');
+      log('Tableros disponibles: '+openBoards.map(b=>b.name).join(', '),'ok');
+    } catch(e){
+      setStatus('Error al cargar tableros.');
+      log(e.message,'err');
+      $('#btnLoadBoards').disabled = false;
+    }
+  });
+
+  $('#btnRun').addEventListener('click', async ()=>{
+    const file = $('#csvFile').files[0];
+    const boardId = $('#boardSelect').value;
+    if(!api.key() || !api.token()){ alert('Ingresá API Key y Token.'); return; }
+    if(!file){ alert('Seleccioná un CSV.'); return; }
+    if(!boardId){ alert('Seleccioná un tablero.'); return; }
+
+    try{
+      $('#btnRun').disabled = true;
+      setStatus('Leyendo CSV…');
+      const text = await file.text();
+      const rows = parseCSV(text);
+      if(rows.length < 2) throw new Error('CSV vacío o sin filas.');
+
+      const headers = rows[0].map(h=>h.trim());
+      const idxName = headers.findIndex(h=>/^name$/i.test(h));
+      const idxDesc = headers.findIndex(h=>/^description$/i.test(h));
+      const idxLabels = headers.findIndex(h=>/^labels?$/i.test(h));
+      const idxList = headers.findIndex(h=>/^list$/i.test(h));
+      if([idxName, idxDesc, idxLabels, idxList].some(i=>i<0)){
+        throw new Error('El CSV debe tener columnas: Name, Description, Labels, List');
+      }
+      const items = rows.slice(1).filter(r => (r[idxName]||'').trim() !== '');
+      const total = items.length;
+      if(!total) throw new Error('No hay filas válidas en el CSV.');
+
+      log('Total de filas a crear: '+ total, 'ok');
+      $('#prog').max = total;
+      $('#prog').value = 0;
+
+      setStatus('Cargando listas y etiquetas del tablero…');
+      let lists = await trelloGET(`boards/${boardId}/lists`, { fields:'name' });
+      let labels = await trelloGET(`boards/${boardId}/labels`, { fields:'name,color', limit: 1000 });
+
+      const delayMs = Math.max(0, parseInt($('#delay').value||'0',10) || 0);
+
+      let created=0, errors=0, skipped=0;
+      for(const row of items){
+        const name = (row[idxName]||'').trim();
+        const desc = (row[idxDesc]||'').trim();
+        const listName = (row[idxList]||'Backlog').trim() || 'Backlog';
+        const labelsRaw = (row[idxLabels]||'').trim();
+
+        if(!name){ skipped++; continue; }
+
+        try{
+          const list = await ensureList(boardId, lists, listName);
+          const labelNames = labelsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+          const labelIds = [];
+          for(const ln of labelNames){
+            const lab = await ensureLabel(boardId, labels, ln);
+            if(lab) labelIds.push(lab.id);
+          }
+          await trelloPOST('cards', { name, desc, idList: list.id, idLabels: labelIds.join(',') || undefined });
+          created++;
+          $('#prog').value = created + skipped + errors;
+          setStatus(`Progreso: ${created + skipped + errors} / ${total}`);
+          if(delayMs) await sleep(delayMs);
+        } catch(e){
+          errors++;
+          log('Error creando "'+name+'": '+e.message,'err');
+        }
+      }
+
+      setStatus(`Finalizado. Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`);
+      log(`Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`, errors? 'warn' : 'ok');
+      alert(`Listo. Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`);
+    }catch(e){
+      setStatus('Fallo en la importación.');
+      log(e.message,'err');
+    }finally{
+      $('#btnRun').disabled = false;
+    }
+  });
+
+  async function ensureList(boardId, listsCache, name){
+    let l = listsCache.find(x => x.name.toLowerCase() === name.toLowerCase());
+    if(l) return l;
+    l = await trelloPOST('lists', { idBoard: boardId, name, pos:'bottom' });
+    listsCache.push(l);
+    await sleep(150);
+    return l;
+  }
+  async function ensureLabel(boardId, labelsCache, name){
+    if(!name) return null;
+    let lab = labelsCache.find(x => (x.name||'').toLowerCase() === name.toLowerCase());
+    if(lab) return lab;
+    lab = await trelloPOST('labels', { idBoard: boardId, name, color: null });
+    labelsCache.push(lab);
+    await sleep(120);
+    return lab;
+  }
+})();
+</script>
+</body>
+</html>
