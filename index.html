@@ -80,6 +80,88 @@
     </div>
   </div>
 
+  <!-- Modal de Privacidad + Cómo funciona -->
+<div id="privacyModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="privacy-title" role="dialog" aria-modal="true">
+  <!-- Backdrop -->
+  <div id="privacyBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+
+  <!-- Panel -->
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black/5">
+      <div class="p-5">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M12 9v3m0 4h.01M12 3c-4.97 0-9 3.582-9 8 0 2.386 1.158 4.52 3 5.953V21l3.09-1.545A10.97 10.97 0 0 0 12 19c4.97 0 9-3.582 9-8s-4.03-8-9-8z"/>
+            </svg>
+          </div>
+          <div class="grow">
+            <h2 id="privacy-title" class="text-lg font-semibold">Aviso de privacidad</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              ¡Este importador <span class="font-medium">NO envía</span> tu API Key, token ni contraseñas a ningún servidor!
+              Todo corre local en tu navegador. Si elegís "Guardar key/token", se guardan solo tu navegador.
+            </p>
+
+            <ul class="mt-3 list-disc pl-5 text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              <li>Sin backend: no almacena credenciales.</li>
+              <li>Las llamadas van directo a <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">api.trello.com</code>.</li>
+              <li>Podés borrar las credenciales cuando quieras.</li>
+            </ul>
+
+            <label class="mt-4 inline-flex items-center gap-2 text-sm">
+              <input id="privacyDontShow" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 dark:bg-slate-900 dark:border-slate-600">
+              No volver a mostrar en este navegador
+            </label>
+
+            <!-- Disclosure -->
+            <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
+              <button id="privacyHowBtn"
+                      class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-sky-600 focus:outline-none"
+                      aria-expanded="false" aria-controls="privacyHowPanel" type="button">
+                <svg class="h-4 w-4 transition-transform" id="privacyHowIcon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd"/>
+                </svg>
+                Ver cómo funciona
+              </button>
+              <div id="privacyHowPanel" class="mt-3 hidden text-sm text-slate-600 dark:text-slate-300">
+                <p class="mb-2">Flujo de ejecución:</p>
+                <ol class="list-decimal pl-5 space-y-1">
+                  <li>Generar TOKEN en Trello.</li>
+                  <li>Cargar CSV con formato: <code>Name,Description,Labels,List</code>.</li>
+                  <li>El sistema carga tus tableros.</li>
+                  <li>Seleccionar tablero en el cual queres cargar las tarjetas.</li>
+                  <li>Por cada fila:
+                    <ul class="list-disc pl-5 mt-1">
+                      <li>Crea las listas.</li>
+                      <li>Crea la etiqueta si no existe.</li>
+                      <li>Crea la tarjeta con <code>name</code>, <code>desc</code>, <code>idList</code> y <code>idLabels</code>.</li>
+                    </ul>
+                  </li>
+                  <li>Se muestra el progreso y los logs. Ejemplo:</li>
+                </ol>
+                <pre class="mt-3 bg-slate-900 text-slate-100 rounded-xl p-3 overflow-auto text-xs">
+→ [OK] Tableros: TEST-TRELLO-2025
+→ [OK] Filas a crear: 8
+→ [OK] Creadas: 8, Omitidas: 0, Errores: 0
+                </pre>
+              </div>
+            </div>
+            <!-- /Disclosure -->
+          </div>
+        </div>
+
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button id="privacyClose"
+                  class="inline-flex items-center rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const $ = (sel)=>document.querySelector(sel);
@@ -289,6 +371,63 @@
     await sleep(120);
     return lab;
   }
+})();
+
+(function(){
+  const MODAL_ID = 'privacyModal';
+  const ACK_KEY  = 'trello-importer-privacy-ack';
+
+  const $ = (s)=>document.querySelector(s);
+  const modal    = $('#'+MODAL_ID);
+  const closeBt  = $('#privacyClose');
+  const chk      = $('#privacyDontShow');
+  const backdrop = $('#privacyBackdrop');
+
+  // Accordion
+  const howBtn   = $('#privacyHowBtn');
+  const howIcon  = $('#privacyHowIcon');
+  const howPanel = $('#privacyHowPanel');
+
+  function openModal(){
+    modal.classList.remove('hidden');
+    closeBt?.focus();
+    document.addEventListener('keydown', onEsc);
+  }
+  function closeModal(){
+    modal.classList.add('hidden');
+    document.removeEventListener('keydown', onEsc);
+  }
+  function onEsc(e){ if(e.key === 'Escape') closeModal(); }
+
+  // Mostrar al cargar si no fue aceptado
+  window.addEventListener('DOMContentLoaded', () => {
+    try {
+      const ack = localStorage.getItem(ACK_KEY);
+      if (ack !== '1') openModal();
+    } catch { openModal(); }
+  });
+
+  // Cerrar y recordar preferencia
+  closeBt?.addEventListener('click', () => {
+    try { if (chk?.checked) localStorage.setItem(ACK_KEY, '1'); } catch {}
+    closeModal();
+  });
+
+  // Click en backdrop cierra
+  backdrop?.addEventListener('click', closeModal);
+
+  // Toggle acordeón
+  howBtn?.addEventListener('click', () => {
+    const expanded = howBtn.getAttribute('aria-expanded') === 'true';
+    howBtn.setAttribute('aria-expanded', String(!expanded));
+    howPanel.classList.toggle('hidden', expanded);
+    // Rotación del ícono
+    if (expanded) {
+      howIcon.style.transform = 'rotate(0deg)';
+    } else {
+      howIcon.style.transform = 'rotate(180deg)';
+    }
+  });
 })();
 </script>
 </body>
