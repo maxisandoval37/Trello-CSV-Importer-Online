@@ -1,77 +1,112 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Importar Backlog a Trello (CSV → Tarjetas) v2</title>
-<style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 24px; }
-  h1 { font-size: 20px; margin: 0 0 12px; }
-  .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-  label { display:block; font-weight:600; margin-top:10px; }
-  input[type=text], input[type=password], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
-  input[type=file]{ margin-top: 6px; }
-  button { padding: 10px 16px; border: 0; border-radius: 8px; background:#0a66c2; color:#fff; cursor:pointer; font-weight:600; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  .muted{ color:#666; font-size:12px; }
-  .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  progress{ width:100%; height:16px; }
-  pre{ background:#0b0b0b; color:#d6d6d6; padding:12px; border-radius:8px; overflow:auto; max-height:260px; }
-  .ok{ color: #0a7f3f; font-weight:600; }
-  .warn{ color:#b26a00; font-weight:600; }
-  .err{ color:#b00020; font-weight:600; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Importar Backlog a Trello — CSV → Tarjetas (Tailwind)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light dark">
 </head>
-<body>
-  <h1>Importar Backlog a Trello (CSV → Tarjetas) v2</h1>
-  <div class="card">
-    <p>Este asistente crea listas que falten (por ej. <b>Backlog</b>) y luego tarjetas a partir de un CSV con columnas <code>Name,Description,Labels,List</code>.</p>
-    <p class="muted">Compatibilidad mejorada con archivos CSV Windows/Mac/Linux, CRLF/LF y BOM.</p>
-  </div>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold tracking-tight">Importar Backlog a Trello</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">CSV → Tarjetas. Compatible con Windows/Mac/Linux (CRLF/LF) y archivos con BOM.</p>
+    </header>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <label for="apiKey">API Key de Trello</label>
-        <input id="apiKey" type="text" placeholder="p.ej. 6260..."/>
-      </div>
-      <div>
-        <label for="token">Token personal</label>
-        <input id="token" type="password" placeholder="Tu token de autorización"/>
-      </div>
-    </div>
-    <label for="csvFile">CSV</label>
-    <input id="csvFile" type="file" accept=".csv,text/csv"/>
-    <div class="row">
-      <div>
-        <label for="boardSelect">Tablero destino</label>
-        <select id="boardSelect" disabled>
-          <option value="">Cargar tableros…</option>
-        </select>
-      </div>
-      <div>
-        <label for="delay">Velocidad (delay por tarjeta, ms)</label>
-        <input id="delay" type="text" value="180"/>
-        <span class="muted">Aumentar si ves rate limit.</span>
-      </div>
-    </div>
-    <div style="margin-top:12px; display:flex; gap:8px;">
-      <button id="btnLoadBoards">1) Cargar tableros</button>
-      <button id="btnRun" disabled>2) Importar CSV → Trello</button>
-    </div>
-  </div>
+    <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-6 shadow-sm">
+      <p>Este asistente crea <span class="font-medium">listas que falten</span> (p. ej. <code>Backlog</code>) y luego tarjetas a partir de un CSV con columnas <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">Name, Description, Labels, List</code>.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Los errores de telemetría de Atlassian (<code>xp.atlassian.com</code>) son inocuos. El flujo usa exclusivamente <code>api.trello.com</code>.</p>
+    </section>
 
-  <div class="card">
-    <label for="prog">Estado</label>
-      <progress id="prog" value="0" max="100"></progress>
-      <div id="status" class="muted">Esperando…</div>
-    <label for="log">Registro</label>
-    <pre id="log"></pre>
+    <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-6 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="apiKey" class="block text-sm font-medium mb-1">API Key de Trello</label>
+          <input id="apiKey" type="text" placeholder="p.ej. 6260..." class="w-full rounded-xl border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+        </div>
+        <div>
+          <label for="token" class="block text-sm font-medium mb-1">Token personal</label>
+          <input id="token" type="password" placeholder="Tu token de autorización" class="w-full rounded-xl border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+        </div>
+        <div>
+          <label for="csvFile" class="block text-sm font-medium mb-1">CSV</label>
+          <input id="csvFile" type="file" accept=".csv,text/csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600" />
+          <p class="text-xs text-slate-500 mt-1">Asegurate del encabezado: <code>Name,Description,Labels,List</code>.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="boardSelect" class="block text-sm font-medium mb-1">Tablero destino</label>
+            <select id="boardSelect" disabled class="w-full rounded-xl border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+              <option value="">Cargar tableros…</option>
+            </select>
+          </div>
+          <div>
+            <label for="delay" class="block text-sm font-medium mb-1">Delay por tarjeta (ms)</label>
+            <input id="delay" type="number" value="180" class="w-full rounded-xl border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+            <p class="text-xs text-slate-500 mt-1">Subí a 250–300 si ves rate limit.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center gap-3">
+        <button id="btnLoadBoards" class="inline-flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 shadow-sm transition">
+          <span>1) Cargar tableros</span>
+        </button>
+        <button id="btnRun" disabled class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+          <span>2) Importar CSV → Trello</span>
+        </button>
+        <button id="btnSaveLocal" class="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Guardar key/token en este navegador</button>
+        <button id="btnClearLocal" class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Borrar key/token</button>
+      </div>
+    </section>
+
+    <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <label for="prog" class="block text-sm font-medium">Estado</label>
+          <div id="status" class="text-sm text-slate-500 dark:text-slate-400">Esperando…</div>
+        </div>
+        <progress id="prog" value="0" max="100" class="w-64 h-3"></progress>
+      </div>
+      <div>
+        <label for="log" class="block text-sm font-medium mb-1">Registro</label>
+        <pre id="log" class="bg-slate-900 text-slate-100 rounded-xl p-3 text-xs max-h-72 overflow-auto"></pre>
+      </div>
+    </section>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden">
+      <div class="bg-slate-900/90 text-white text-sm px-4 py-2 rounded-xl shadow-lg">Hecho.</div>
+    </div>
   </div>
 
 <script>
 (function(){
   const $ = (sel)=>document.querySelector(sel);
+  const toast = (msg)=>{
+    const t = $('#toast');
+    t.firstElementChild.textContent = msg;
+    t.classList.remove('hidden');
+    setTimeout(()=> t.classList.add('hidden'), 1800);
+  };
+
+  const LS_KEY = 'trello-importer-cred';
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    if (saved.key) $('#apiKey').value = saved.key;
+    if (saved.token) $('#token').value = saved.token;
+  } catch {}
+
+  $('#btnSaveLocal').addEventListener('click', ()=>{
+    const payload = { key: $('#apiKey').value.trim(), token: $('#token').value.trim() };
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    toast('Credenciales guardadas en este navegador.');
+  });
+  $('#btnClearLocal').addEventListener('click', ()=>{
+    localStorage.removeItem(LS_KEY);
+    toast('Credenciales borradas.');
+  });
+
   const api = {
     key: ()=> $('#apiKey').value.trim(),
     token: ()=> $('#token').value.trim(),
@@ -80,7 +115,7 @@
 
   function log(msg, cls='') {
     const el = $('#log');
-    el.innerHTML += (cls ? '['+cls.toUpperCase()+'] ' : '') + msg + "\\n";
+    el.textContent += (cls ? '['+cls.toUpperCase()+'] ' : '') + msg + "\n";
     el.scrollTop = el.scrollHeight;
   }
   function setStatus(msg){ $('#status').textContent = msg; }
@@ -114,12 +149,8 @@
     return res.json();
   }
 
-  // Parser robusto con soporte LF/CRLF y BOM
   function parseCSV(text){
-    // Remover BOM si existe
-    if (text.charCodeAt(0) === 0xFEFF) {
-      text = text.slice(1);
-    }
+    if (text.charCodeAt(0) === 0xFEFF) { text = text.slice(1); }
     const rows=[]; let row=[], cur='', inQ=false;
     for(let i=0;i<text.length;i++){
       const ch=text[i], nx=text[i+1];
@@ -157,7 +188,8 @@
       sel.disabled = false;
       $('#btnRun').disabled = false;
       setStatus('Tableros cargados. Seleccioná uno y ejecutá la importación.');
-      log('Tableros disponibles: '+openBoards.map(b=>b.name).join(', '),'ok');
+      log('Tableros: '+openBoards.map(b=>b.name).join(', '),'ok');
+      toast('Tableros cargados.');
     } catch(e){
       setStatus('Error al cargar tableros.');
       log(e.message,'err');
@@ -191,7 +223,7 @@
       const total = items.length;
       if(!total) throw new Error('No hay filas válidas en el CSV.');
 
-      log('Total de filas a crear: '+ total, 'ok');
+      log('Filas a crear: '+ total, 'ok');
       $('#prog').max = total;
       $('#prog').value = 0;
 
@@ -231,7 +263,7 @@
 
       setStatus(`Finalizado. Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`);
       log(`Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`, errors? 'warn' : 'ok');
-      alert(`Listo. Creadas: ${created}, Omitidas: ${skipped}, Errores: ${errors}`);
+      toast('Importación finalizada.');
     }catch(e){
       setStatus('Fallo en la importación.');
       log(e.message,'err');
