@@ -1,6 +1,6 @@
 # Importador de CSV para Trello
 
-Aplicación web estática que convierte archivos CSV en listas y tarjetas dentro de un tablero de Trello. El flujo se ejecuta 100 % en el navegador: las credenciales se guardan de forma local (opcional) y todas las llamadas se hacen directamente a `api.trello.com`.
+Aplicación web estática que convierte archivos CSV en listas y tarjetas dentro de un tablero de Trello. El flujo se ejecuta 100% en el navegador. Las credenciales se guardan de forma local (opcional) y todas las llamadas se hacen directamente a `api.trello.com`.
 
 ## Características
 - Carga CSV con encabezado `Name,Description,Labels,List`.
@@ -18,17 +18,17 @@ Aplicación web estática que convierte archivos CSV en listas y tarjetas dentro
 1. Ingresar a [Trello-CSV-Importer-Online](https://maxisandoval37.github.io/Trello-CSV-Importer-Online/).
 2. Completar la API Key y el token personal.
 3. Seleccionar el CSV a importar.
-4. Presionar **“Cargar tableros”** para obtener la lista de tableros disponibles.
+4. Presionar **"Cargar tableros"** para obtener la lista de tableros disponibles.
 5. Elegir el tablero destino y ajustar el retardo por tarjeta si es necesario.
-6. Presionar **“Importar CSV → Trello”** y seguir el estado en el panel de progreso y el registro.
+6. Presionar **"Importar CSV → Trello"** y seguir el estado en el panel de progreso.
 
 ## CSV de ejemplo
 El repositorio incluye `trello.csv` como referencia para el formato esperado. Podés duplicarlo y adaptar su contenido a tus necesidades.
 
 ## Desarrollo
-El proyecto utiliza únicamente HTML, CSS (Tailwind via CDN) y JavaScript plano. Cualquier editor o servidor estático alcanza para modificarlo o servirlo.
+El proyecto utiliza únicamente HTML, CSS (Tailwind via CDN) y JavaScript.
 
 ## Información Adicional
 Para cualquier información adicional o consultas: <maxisandoval98@gmail.com>
 
-Muchas gracias!
+**¡Muchas gracias! 🦔**
